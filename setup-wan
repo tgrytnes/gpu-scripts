@@ -50,6 +50,16 @@ echo "--------------------------------------------------"
 echo "🛠️ Updating system tools..."
 apt-get update && apt-get install -y git wget aria2 libgl1-mesa-glx > /dev/null 2>&1
 
+# 1.5 ✅ FIX: Upgrade PyTorch to fix the 'register_pytree_node' error
+# We need to ensure Torch is new enough to handle the latest Transformers library
+echo "🔄 Upgrading PyTorch to match new Transformers requirements..."
+pip install --upgrade torch torchvision torchaudio xformers --index-url https://download.pytorch.org/whl/cu121
+
+# 1.6 ✅ FIX: Set CUDA library paths so PyTorch can find CUDA runtime
+echo "🔧 Configuring CUDA library paths..."
+echo 'export LD_LIBRARY_PATH=/opt/conda/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
+export LD_LIBRARY_PATH=/opt/conda/lib:$LD_LIBRARY_PATH
+
 # 2. Setup ComfyUI
 echo "🛋️ Cloning ComfyUI..."
 if [ ! -d "$COMFY_BASE" ]; then
