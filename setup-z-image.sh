@@ -1,179 +1,138 @@
 #!/bin/bash
 set -e # Exit immediately if a command exits with a non-zero status
 
-# Configuration
+# --- Configuration ---
 WORKSPACE_DIR="/workspace"
-Z_IMAGE_REPO="https://github.com/YOUR_USERNAME/z-image.git" # REPLACE THIS
+# You can leave this placeholder or change it if you have a real custom repo
+Z_IMAGE_REPO="https://github.com/Comfy-Org/z-image.git" 
 COMFY_REPO="https://github.com/comfyanonymous/ComfyUI.git"
-Z_IMAGE_MODEL_REPO="Comfy-Org/z_image_turbo"
-Z_IMAGE_LORA_REPO="tarn59/pixel_art_style_lora_z_image_turbo"
-MODEL_DIR="${WORKSPACE_DIR}/models"
-Z_IMAGE_DOWNLOAD_TEMP="${MODEL_DIR}/.z-image-downloads"
+MANAGER_REPO="https://github.com/ltdrdata/ComfyUI-Manager.git"
 
-# Support both HF_TOKEN and HF_Token (Vast.ai default) plus PID1 env exports
-if [ -z "$HF_TOKEN" ]; then
-    if [ ! -z "$HF_Token" ]; then
-        export HF_TOKEN="$HF_Token"
-    elif [ -r /proc/1/environ ]; then
-        PID_HF_TOKEN=$(tr '\0' '\n' </proc/1/environ | grep '^HF_Token=' | head -n 1 | cut -d '=' -f2-)
-        [ ! -z "$PID_HF_TOKEN" ] && export HF_TOKEN="$PID_HF_TOKEN"
-    fi
+# Define local storage paths
+MODEL_DIR="${WORKSPACE_DIR}/models"
+Z_IMAGE_STORE="${MODEL_DIR}/z-image"
+COMFY_MODEL_DIR="${WORKSPACE_DIR}/ComfyUI/models"
+
+# Ensure HF_TOKEN is grabbed from environment if present (for private repos only)
+if [ -z "$HF_TOKEN" ] && [ -r /proc/1/environ ]; then
+    PID_HF_TOKEN=$(tr '\0' '\n' < /proc/1/environ | grep '^HF_Token=' | head -n 1 | cut -d '=' -f2-)
+    [ ! -z "$PID_HF_TOKEN" ] && export HF_TOKEN="$PID_HF_TOKEN"
 fi
 
-HF_CACHE_DIR="${WORKSPACE_DIR}/.cache/huggingface"
-mkdir -p "$HF_CACHE_DIR"
-export HF_HOME="$HF_CACHE_DIR"
-
-download_z_image_asset() {
-    local repo="$1"
-    local remote_path="$2"
-    local dest_rel="$3"
-    local dest_path="${Z_IMAGE_MODEL_ROOT}/${dest_rel}"
+# Helper function to download files reliably using aria2c (fast & resumable)
+download_file() {
+    local url="$1"
+    local dest_dir="$2"
+    local filename="$3"
+    local dest_path="${dest_dir}/${filename}"
 
     if [ -f "$dest_path" ]; then
-        echo "      ✓ ${dest_rel} already present."
+        echo "  ✓ ${filename} already exists."
         return
     fi
 
-    mkdir -p "$(dirname "$dest_path")"
-    mkdir -p "$Z_IMAGE_DOWNLOAD_TEMP"
-    local staged_path="${Z_IMAGE_DOWNLOAD_TEMP}/${remote_path}"
-    rm -f "$staged_path"
-
-    echo "      ↳ Fetching ${dest_rel} from ${repo}"
-    huggingface-cli download "$repo" "$remote_path" --local-dir "$Z_IMAGE_DOWNLOAD_TEMP" --local-dir-use-symlinks False --token "$HF_TOKEN" >/dev/null
-
-    if [ ! -f "$staged_path" ]; then
-        echo "      ✗ Failed to download ${remote_path} from ${repo}"
-        exit 1
+    echo "  ⬇️ Downloading ${filename}..."
+    mkdir -p "$dest_dir"
+    
+    # Use HF_TOKEN header only if the token exists
+    if [ ! -z "$HF_TOKEN" ]; then
+        aria2c -x 16 -s 16 -k 1M --header="Authorization: Bearer $HF_TOKEN" -d "$dest_dir" -o "$filename" "$url"
+    else
+        aria2c -x 16 -s 16 -k 1M -d "$dest_dir" -o "$filename" "$url"
     fi
-
-    mv "$staged_path" "$dest_path"
-    find "$Z_IMAGE_DOWNLOAD_TEMP" -type d -empty -delete
 }
 
-echo "🎨 Setting up AI Environment (Z-Image + ComfyUI)"
-echo "-----------------------------------------------"
+echo "🎨 Setting up AI Environment (Z-Image Turbo + ComfyUI)"
+echo "-----------------------------------------------------"
 
 # 1. System Updates & Basic Tools
 echo "🛠️ Updating system tools..."
 apt-get update && apt-get install -y git wget aria2 libgl1-mesa-glx > /dev/null 2>&1
 
-# 2. Setup Z-Image
-echo "📦 Setting up Z-Image..."
+# 2. Setup Z-Image (The Code Repository)
+echo "📦 Setting up Z-Image Code..."
+mkdir -p "${WORKSPACE_DIR}/repos"
 if [ -d "${WORKSPACE_DIR}/repos/z-image" ]; then
-    if [ -d "${WORKSPACE_DIR}/repos/z-image/.git" ]; then
-        echo "   z-image already exists. Pulling latest..."
-        cd "${WORKSPACE_DIR}/repos/z-image"
-        git pull
-    else
-        echo "   z-image directory exists but is not a git repo (skipping pull)."
-    fi
+    echo "  ✓ z-image repo exists."
 else
-    echo "   Cloning z-image..."
-    mkdir -p "${WORKSPACE_DIR}/repos"
-    # If you don't have a real repo yet, we create the dir to prevent errors
-    if [ "$Z_IMAGE_REPO" == "https://github.com/YOUR_USERNAME/z-image.git" ]; then
-         mkdir -p "${WORKSPACE_DIR}/repos/z-image"
-         echo "   ⚠️ Placeholder directory created (Update Z_IMAGE_REPO in script to clone actual code)"
+    # Cloning the official Comfy-Org repo as a safe default if yours isn't set
+    if [[ "$Z_IMAGE_REPO" == *"YOUR_USERNAME"* ]]; then
+        echo "  ⚠️ No custom Z-Image repo set. Cloning official Comfy-Org repo..."
+        git clone "https://github.com/Comfy-Org/z-image.git" "${WORKSPACE_DIR}/repos/z-image"
     else
-         git clone "$Z_IMAGE_REPO" "${WORKSPACE_DIR}/repos/z-image"
+        git clone "$Z_IMAGE_REPO" "${WORKSPACE_DIR}/repos/z-image"
     fi
 fi
 
-# Install Z-Image common libs
-echo "   Installing Z-Image pip dependencies..."
-pip install -q diffusers transformers accelerate safetensors pillow
+# Install Z-Image pip dependencies
+echo "  Installing Z-Image pip dependencies..."
+pip install -q diffusers transformers accelerate safetensors pillow sentencepiece protobuf
 
 # 3. Setup ComfyUI
 echo "🛋️ Setting up ComfyUI..."
-if [ -d "${WORKSPACE_DIR}/ComfyUI" ]; then
-    echo "   ComfyUI already exists."
-else
+if [ ! -d "${WORKSPACE_DIR}/ComfyUI" ]; then
     cd "${WORKSPACE_DIR}"
     git clone "$COMFY_REPO"
 fi
 
-echo "   Installing ComfyUI requirements..."
+echo "  Installing ComfyUI requirements..."
 cd "${WORKSPACE_DIR}/ComfyUI"
 pip install -r requirements.txt
-# Align PyTorch stack with ComfyUI/Transformers requirements
-pip install --upgrade torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-# Install ComfyUI Manager (Highly recommended)
-cd "${WORKSPACE_DIR}/ComfyUI/custom_nodes"
-git clone https://github.com/ltdrdata/ComfyUI-Manager.git 2>/dev/null || echo "   ComfyUI Manager already installed"
-
-# 4. Model Management (Shared Storage)
-echo "📥 Managing Models..."
-mkdir -p "$MODEL_DIR"
-Z_IMAGE_MODEL_ROOT="${MODEL_DIR}/z-image"
-mkdir -p "$Z_IMAGE_MODEL_ROOT"
-
-# Download Logic (Azure > HuggingFace > Skip)
-TARGET_MODEL="${MODEL_DIR}/z-image-model.safetensors"
-
-if [ -f "$TARGET_MODEL" ]; then
-    echo "   ✓ Model already present."
-else
-    if [ ! -z "$AZURE_STORAGE_ACCOUNT" ]; then
-        echo "   Checking Azure..."
-        az storage blob download \
-            --account-name ${AZURE_STORAGE_ACCOUNT} \
-            --account-key ${AZURE_STORAGE_KEY} \
-            --container-name models \
-            --name z-image/model.safetensors \
-            --file "$TARGET_MODEL" 2>/dev/null && echo "   ✓ Downloaded from Azure"
-    fi
-
-    # Fallback to HuggingFace if Azure failed or skipped
-    if [ ! -f "$TARGET_MODEL" ] && [ ! -z "$HF_TOKEN" ]; then
-        echo "   Downloading from HuggingFace..."
-        huggingface-cli login --token "$HF_TOKEN"
-        huggingface-cli download stabilityai/stable-diffusion-xl-base-1.0 --include "*.safetensors" --local-dir "$MODEL_DIR" --local-dir-use-symlinks False
-    fi
+# Install ComfyUI Manager
+if [ ! -d "${WORKSPACE_DIR}/ComfyUI/custom_nodes/ComfyUI-Manager" ]; then
+    cd "${WORKSPACE_DIR}/ComfyUI/custom_nodes"
+    git clone "$MANAGER_REPO"
 fi
 
-if [ -z "$HF_TOKEN" ]; then
-    echo "   ⚠️ HF_TOKEN not set. Skipping Z-Image asset downloads from HuggingFace."
-else
-    echo "   Downloading required Z-Image assets from HuggingFace..."
-    huggingface-cli login --token "$HF_TOKEN"
+# 4. Download Models (The Heavy Lifting)
+echo "📥 Downloading Z-Image Models..."
+mkdir -p "$Z_IMAGE_STORE"
 
-    MODEL_FILE_SPECS=(
-        "split_files/text_encoders/qwen_3_4b.safetensors|text_encoders/qwen_3_4b.safetensors"
-        "split_files/vae/ae.safetensors|vae/ae.safetensors"
-        "split_files/diffusion_models/z_image_turbo_bf16.safetensors|diffusion_models/z_image_turbo_bf16.safetensors"
-    )
-    OLDIFS="$IFS"
-    IFS="|"
-    for spec in "${MODEL_FILE_SPECS[@]}"; do
-        read -r remote dest <<<"$spec"
-        download_z_image_asset "$Z_IMAGE_MODEL_REPO" "$remote" "$dest"
-    done
-    IFS="$OLDIFS"
+# --- Define URLs ---
+# These are the direct download links for the files you requested
+URL_VAE="https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors"
+URL_DIFFUSION="https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors"
+URL_TEXT_ENC="https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors"
+URL_LORA="https://huggingface.co/tarn59/pixel_art_style_lora_z_image_turbo/resolve/main/pixel_art_style_z_image_turbo.safetensors"
 
-    download_z_image_asset "$Z_IMAGE_LORA_REPO" "pixel_art_style_z_image_turbo.safetensors" "loras/pixel_art_style_z_image_turbo.safetensors"
-fi
+# --- Execute Downloads ---
+# We store them in a central "z-image" folder to keep things clean
+download_file "$URL_VAE"       "${Z_IMAGE_STORE}/vae"              "ae.safetensors"
+download_file "$URL_DIFFUSION" "${Z_IMAGE_STORE}/diffusion_models" "z_image_turbo_bf16.safetensors"
+download_file "$URL_TEXT_ENC"  "${Z_IMAGE_STORE}/text_encoders"    "qwen_3_4b.safetensors"
+download_file "$URL_LORA"      "${Z_IMAGE_STORE}/loras"            "pixel_art_style_z_image_turbo.safetensors"
 
 # 5. Link Models to ComfyUI
-# This creates a "shortcut" so ComfyUI sees the model without duplicating the file
 echo "🔗 Linking models to ComfyUI..."
-mkdir -p "${WORKSPACE_DIR}/ComfyUI/models/checkpoints"
-ln -sf "$TARGET_MODEL" "${WORKSPACE_DIR}/ComfyUI/models/checkpoints/z-image-model.safetensors"
-ln -sf "${Z_IMAGE_MODEL_ROOT}/diffusion_models/z_image_turbo_bf16.safetensors" "${WORKSPACE_DIR}/ComfyUI/models/checkpoints/z_image_turbo_bf16.safetensors"
-mkdir -p "${WORKSPACE_DIR}/ComfyUI/models/clip"
-ln -sf "${Z_IMAGE_MODEL_ROOT}/text_encoders/qwen_3_4b.safetensors" "${WORKSPACE_DIR}/ComfyUI/models/clip/qwen_3_4b.safetensors"
-mkdir -p "${WORKSPACE_DIR}/ComfyUI/models/vae"
-ln -sf "${Z_IMAGE_MODEL_ROOT}/vae/ae.safetensors" "${WORKSPACE_DIR}/ComfyUI/models/vae/z_image_ae.safetensors"
-mkdir -p "${WORKSPACE_DIR}/ComfyUI/models/loras"
-ln -sf "${Z_IMAGE_MODEL_ROOT}/loras/pixel_art_style_z_image_turbo.safetensors" "${WORKSPACE_DIR}/ComfyUI/models/loras/pixel_art_style_z_image_turbo.safetensors"
+
+# Helper to link files
+link_model() {
+    local src="$1"
+    local dest_folder="$2"
+    local dest_filename="$3"
+    mkdir -p "$dest_folder"
+    ln -sf "$src" "${dest_folder}/${dest_filename}"
+}
+
+# Link VAE
+link_model "${Z_IMAGE_STORE}/vae/ae.safetensors" \
+           "${COMFY_MODEL_DIR}/vae" "z_image_ae.safetensors"
+
+# Link Diffusion Model (IMPORTANT: Goes to diffusion_models, NOT checkpoints)
+link_model "${Z_IMAGE_STORE}/diffusion_models/z_image_turbo_bf16.safetensors" \
+           "${COMFY_MODEL_DIR}/diffusion_models" "z_image_turbo_bf16.safetensors"
+
+# Link Text Encoder
+link_model "${Z_IMAGE_STORE}/text_encoders/qwen_3_4b.safetensors" \
+           "${COMFY_MODEL_DIR}/text_encoders" "qwen_3_4b.safetensors"
+
+# Link LoRA
+link_model "${Z_IMAGE_STORE}/loras/pixel_art_style_z_image_turbo.safetensors" \
+           "${COMFY_MODEL_DIR}/loras" "pixel_art_style_z_image_turbo.safetensors"
 
 echo ""
 echo "✅ Setup Complete!"
 echo "-----------------------------------------------"
-echo "To run Z-Image:"
-echo "  cd ${WORKSPACE_DIR}/repos/z-image && python generate.py"
-echo ""
 echo "To run ComfyUI:"
 echo "  cd ${WORKSPACE_DIR}/ComfyUI && python main.py --listen --port 8188"
 echo "-----------------------------------------------"
