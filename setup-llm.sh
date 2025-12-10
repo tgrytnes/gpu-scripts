@@ -20,6 +20,7 @@ fi
 MODEL_DOWNLOAD_DIR="$MODEL_DIR/$MODEL_SUBDIR"
 MODEL_PART1="$MODEL_DOWNLOAD_DIR/Llama-3.3-70B-Instruct-Q8_0-00001-of-00002.gguf"
 MODEL_PART2="$MODEL_DOWNLOAD_DIR/Llama-3.3-70B-Instruct-Q8_0-00002-of-00002.gguf"
+MODEL_MERGED="$MODEL_DOWNLOAD_DIR/Llama-3.3-70B-Instruct-Q8_0.gguf"
 
 # --- Helper Functions ---
 log() { echo -e "[\033[1;34mINFO\033[0m] $1"; }
@@ -87,7 +88,7 @@ done
 
 # 4. Download the Q8 Model (split into 2 parts)
 if [[ -f "$MODEL_PART1" ]] && [[ -f "$MODEL_PART2" ]]; then
-    log "✓ Model files found:"
+    log "✓ Model split files found:"
     log "   Part 1: $MODEL_PART1"
     log "   Part 2: $MODEL_PART2"
 else
@@ -129,20 +130,62 @@ else
     log "✓ Both model parts downloaded successfully"
 fi
 
+# 4.5 Merge split files (Ollama cannot handle split GGUF files)
+if [[ -f "$MODEL_MERGED" ]]; then
+    log "✓ Merged model file already exists: $MODEL_MERGED"
+else
+    log "🔗 Merging split files into single GGUF..."
+    log "   This will take a few minutes (~75GB copy operation)"
+    
+    # Check available disk space
+    REQUIRED_SPACE_GB=75
+    AVAILABLE_SPACE_KB=$(df "$MODEL_DOWNLOAD_DIR" | tail -1 | awk '{print $4}')
+    AVAILABLE_SPACE_GB=$((AVAILABLE_SPACE_KB / 1024 / 1024))
+    
+    if [[ $AVAILABLE_SPACE_GB -lt $REQUIRED_SPACE_GB ]]; then
+        warn "Low disk space: ${AVAILABLE_SPACE_GB}GB available, ${REQUIRED_SPACE_GB}GB required"
+        warn "Merge may fail. Consider freeing up space first."
+    else
+        log "✓ Sufficient disk space: ${AVAILABLE_SPACE_GB}GB available"
+    fi
+    
+    # Merge the files
+    if cat "$MODEL_PART1" "$MODEL_PART2" > "$MODEL_MERGED"; then
+        log "✓ Files merged successfully"
+        
+        # Verify merged file size
+        MERGED_SIZE=$(stat -c%s "$MODEL_MERGED" 2>/dev/null || stat -f%z "$MODEL_MERGED" 2>/dev/null)
+        MERGED_SIZE_GB=$((MERGED_SIZE / 1024 / 1024 / 1024))
+        log "   Merged file size: ${MERGED_SIZE_GB}GB"
+        
+        # Optional: Remove split files to save space (uncomment if needed)
+        # log "🗑️  Removing split files to save space..."
+        # rm "$MODEL_PART1" "$MODEL_PART2"
+        # log "   Saved ~${MERGED_SIZE_GB}GB of disk space"
+    else
+        error "Failed to merge model files. Check disk space and file permissions."
+    fi
+fi
+
 # 5. Create the Custom Model in Ollama
 log "⚙️  Registering Q8 Model with Ollama..."
 
-# Create Modelfile - Ollama will auto-load both parts when given part 1
+# Create Modelfile - pointing to the merged file
 MODELFILE_PATH="$MODEL_DIR/Modelfile"
 cat > "$MODELFILE_PATH" <<EOF
-FROM $MODEL_PART1
+FROM $MODEL_MERGED
 PARAMETER num_ctx 8192
 PARAMETER temperature 0.7
 PARAMETER top_p 0.9
 EOF
 
-log "📄 Modelfile created, referencing: $MODEL_PART1"
-log "   (Ollama will automatically load both parts)"
+log "📄 Modelfile created, referencing: $MODEL_MERGED"
+
+# Remove existing model if present
+if ollama list | grep -q "$MODEL_NAME"; then
+    log "🗑️  Removing existing model: $MODEL_NAME"
+    ollama rm "$MODEL_NAME" || warn "Failed to remove existing model"
+fi
 
 # This compiles the model definition (takes a few seconds)
 log "🔨 Creating Ollama model '$MODEL_NAME' (this may take a moment)..."
@@ -198,8 +241,7 @@ echo ""
 log "✅ Setup Complete!"
 echo ""
 log "📍 Model location: $MODEL_DOWNLOAD_DIR"
-log "   Part 1: $(basename "$MODEL_PART1")"
-log "   Part 2: $(basename "$MODEL_PART2")"
+log "   Merged file: $(basename "$MODEL_MERGED")"
 log "📍 Ollama logs: $OLLAMA_LOG"
 log "📍 Test script: $TEST_SCRIPT"
 echo ""
