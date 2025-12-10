@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # --- Configuration ---
-# Llama 3.3 70B (Q6_K - ~52GB, single file)
+# Llama 3.3 70B (Q5_K_S - 48.7GB, single file)
 HF_REPO="bartowski/Llama-3.3-70B-Instruct-GGUF"
-MODEL_FILE="Llama-3.3-70B-Instruct-Q6_K.gguf"
-MODEL_NAME="llama3.3-70b-q6"
+MODEL_FILE="Llama-3.3-70B-Instruct-Q5_K_S.gguf"
+MODEL_NAME="llama3.3-70b-q5"
 
 # Use /workspace if it exists (RunPod), otherwise use home directory
 if [[ -d "/workspace" ]]; then
@@ -35,7 +35,7 @@ check_sudo() {
     fi
 }
 
-log "🚀 Starting Setup: Llama 3.3 70B (Q6_K) via Ollama"
+log "🚀 Starting Setup: Llama 3.3 70B (Q5_K_S) via Ollama"
 
 # Check permissions first
 check_sudo
@@ -89,11 +89,11 @@ if [[ -f "$MODEL_PATH" ]]; then
     MODEL_SIZE_GB=$((MODEL_SIZE / 1024 / 1024 / 1024))
     log "   File size: ${MODEL_SIZE_GB}GB"
 else
-    log "📥 Downloading Llama 3.3 70B Q6_K (~52GB, single file)..."
+    log "📥 Downloading Llama 3.3 70B Q5_K_S (48.7GB, single file)..."
     log "   (This uses high-speed connection, please wait)"
 
     # Check available disk space
-    REQUIRED_SPACE_GB=55
+    REQUIRED_SPACE_GB=50
     AVAILABLE_SPACE_KB=$(df "$MODEL_DIR" | tail -1 | awk '{print $4}')
     AVAILABLE_SPACE_GB=$((AVAILABLE_SPACE_KB / 1024 / 1024))
     
@@ -172,7 +172,7 @@ from openai import OpenAI
 import time
 import sys
 
-print("🤖 Connecting to Llama 3.3 70B (Q6_K)...")
+print("🤖 Connecting to Llama 3.3 70B (Q5_K_S)...")
 
 try:
     # Ollama provides an OpenAI-compatible API
@@ -216,6 +216,6 @@ log "  1. Run test script: python3 $TEST_SCRIPT"
 log "  2. Interactive chat: ollama run $MODEL_NAME"
 log "  3. List models: ollama list"
 echo ""
-log "ℹ️  Note: Q6_K quantization provides excellent quality (~52GB)"
-log "   Alternative: Q4_K_M is faster and smaller (~40GB) with good quality"
+log "ℹ️  Note: Q5_K_S quantization provides excellent quality (48.7GB)"
+log "   Alternative: Q4_K_M is faster and smaller (~42GB) with very good quality"
 echo ""
