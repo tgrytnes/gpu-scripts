@@ -159,9 +159,9 @@ else
         log "   Merged file size: ${MERGED_SIZE_GB}GB"
         
         # Optional: Remove split files to save space (uncomment if needed)
-        # log "🗑️  Removing split files to save space..."
-        # rm "$MODEL_PART1" "$MODEL_PART2"
-        # log "   Saved ~${MERGED_SIZE_GB}GB of disk space"
+        log "🗑️  Removing split files to save space..."
+        rm "$MODEL_PART1" "$MODEL_PART2"
+        log "   Saved ~${MERGED_SIZE_GB}GB of disk space"
     else
         error "Failed to merge model files. Check disk space and file permissions."
     fi
