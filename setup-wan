@@ -1,0 +1,106 @@
+#!/bin/bash
+set -e # Exit immediately if errors occur
+
+# --- Configuration ---
+WORKSPACE_DIR="/workspace"
+COMFY_REPO="https://github.com/comfyanonymous/ComfyUI.git"
+MANAGER_REPO="https://github.com/ltdrdata/ComfyUI-Manager.git"
+
+# Define Paths
+COMFY_BASE="${WORKSPACE_DIR}/ComfyUI"
+
+# --- Fix VS Code Git Errors (Standard Fix) ---
+unset GIT_ASKPASS
+unset SSH_ASKPASS
+git config --global --unset credential.helper || true
+git config --global credential.helper store
+
+# Ensure HF_TOKEN is grabbed from environment (for authenticated downloads if needed)
+if [ -z "$HF_TOKEN" ] && [ -r /proc/1/environ ]; then
+    PID_HF_TOKEN=$(tr '\0' '\n' < /proc/1/environ | grep '^HF_Token=' | head -n 1 | cut -d '=' -f2-)
+    [ ! -z "$PID_HF_TOKEN" ] && export HF_TOKEN="$PID_HF_TOKEN"
+fi
+
+# Download Helper (Uses aria2c)
+download_file() {
+    local url="$1"
+    local dest_dir="$2"
+    local filename="$3"
+    
+    mkdir -p "$dest_dir"
+    local dest_path="${dest_dir}/${filename}"
+
+    if [ -f "$dest_path" ]; then
+        echo "  ✓ ${filename} already exists."
+        return
+    fi
+
+    echo "  ⬇️ Downloading ${filename}..."
+    if [ ! -z "$HF_TOKEN" ]; then
+        aria2c -x 16 -s 16 -k 1M --header="Authorization: Bearer $HF_TOKEN" -d "$dest_dir" -o "$filename" "$url"
+    else
+        aria2c -x 16 -s 16 -k 1M -d "$dest_dir" -o "$filename" "$url"
+    fi
+}
+
+echo "🎥 Setting up Wan 2.1 (Image-to-Video) Environment"
+echo "--------------------------------------------------"
+
+# 1. Install System Tools
+echo "🛠️ Updating system tools..."
+apt-get update && apt-get install -y git wget aria2 libgl1-mesa-glx > /dev/null 2>&1
+
+# 2. Setup ComfyUI
+echo "🛋️ Cloning ComfyUI..."
+if [ ! -d "$COMFY_BASE" ]; then
+    git clone "$COMFY_REPO" "$COMFY_BASE"
+fi
+
+# Install Manager
+if [ ! -d "${COMFY_BASE}/custom_nodes/ComfyUI-Manager" ]; then
+    cd "${COMFY_BASE}/custom_nodes" && git clone "$MANAGER_REPO"
+fi
+
+# 3. Install Python Dependencies
+echo "🐍 Installing Python Requirements..."
+# Upgrade pip and install standard Comfy requirements
+pip install --upgrade pip
+cd "$COMFY_BASE" && pip install -r requirements.txt
+# Install extra dependencies often needed for Wan/Video
+pip install opencv-python imageio imageio-ffmpeg
+
+# 4. DOWNLOAD WAN 2.1 MODELS
+# We download directly to ComfyUI folders to save space (no double storage)
+echo "📥 Downloading Massive Wan 2.1 Models (This may take a while)..."
+
+# --- 4a. The Main Diffusion Model (14B - 480p version) ---
+# Size: ~28GB. This is the heavy lifter.
+# URL is for the FP16 480p version which is the standard balance of quality/speed.
+URL_DIFF="https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/diffusion_models/wan2.1_i2v_480p_14B_fp16.safetensors"
+download_file "$URL_DIFF" "${COMFY_BASE}/models/diffusion_models" "wan2.1_i2v_480p_14B_fp16.safetensors"
+
+# --- 4b. Text Encoder (UMT5 XXL) ---
+# Size: ~6GB (FP8 scaled). Required for Wan to understand prompts.
+URL_TEXT="https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+download_file "$URL_TEXT" "${COMFY_BASE}/models/text_encoders" "umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+
+# --- 4c. VAE (Video Autoencoder) ---
+URL_VAE="https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors"
+download_file "$URL_VAE" "${COMFY_BASE}/models/vae" "wan_2.1_vae.safetensors"
+
+# --- 4d. CLIP Vision (Required for Image-to-Video input) ---
+URL_CLIP="https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors"
+download_file "$URL_CLIP" "${COMFY_BASE}/models/clip_vision" "clip_vision_h.safetensors"
+
+echo "---------------------------------------"
+echo "✅ Wan 2.1 Setup Complete!"
+echo ""
+echo "🚀 TO START COMFYUI:"
+echo "   cd /workspace/ComfyUI"
+echo "   python main.py --listen 0.0.0.0"
+echo ""
+echo "💡 USAGE TIP:"
+echo "   1. Open ComfyUI."
+echo "   2. Load the standard Wan 2.1 Image-to-Video workflow."
+echo "   3. Ensure your Checkpoint Loader selects 'wan2.1_i2v_480p_14B_fp16.safetensors'."
+echo "---------------------------------------"
