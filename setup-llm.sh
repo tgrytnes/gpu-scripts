@@ -1,90 +1,210 @@
 #!/bin/bash
 set -euo pipefail
 
-# Configuration
-MODEL_FILENAME="mistral-7b-instruct-v0.2.Q8_0.gguf"
-# Using TheBloke's repo as it is the standard for GGUF
-HF_REPO="TheBloke/Mistral-7B-Instruct-v0.2-GGUF" 
-MODEL_DIR="/workspace/models"
-MODEL_PATH="$MODEL_DIR/$MODEL_FILENAME"
+# --- Configuration ---
+# Llama 3.3 70B (Q8 Lossless - ~75GB split into 2 parts)
+HF_REPO="bartowski/Llama-3.3-70B-Instruct-GGUF"
+MODEL_SUBDIR="Llama-3.3-70B-Instruct-Q8_0"
+MODEL_NAME="llama3.3-70b-q8"
 
-# Helper for formatted output
-log() { echo -e "[\033[1;34mINFO\033[0m] $1"; }
-warn() { echo -e "[\033[1;33mWARN\033[0m] $1"; }
-err()  { echo -e "[\033[1;31mERR\033[0m]  $1"; }
-
-log "🤖 LLM Showcase Setup (Q8 Quantization)"
-
-# Ensure directories exist
-mkdir -p "$MODEL_DIR"
-mkdir -p /workspace/repos/llm-showcase
-
-# Navigate to repo or create placeholder
-cd /workspace/repos/llm-showcase || true
-
-# 1. Install Dependencies
-# We install huggingface-hub (for the CLI) and llama-cpp-python (for the Q8 model)
-log "📦 Installing LLM dependencies..."
-pip install -q transformers accelerate torch huggingface-hub bitsandbytes llama-cpp-python
-
-# 2. Check/Download Model
-if [[ -f "$MODEL_PATH" ]]; then
-    log "✓ Model found at: $MODEL_PATH"
+# Use /workspace if it exists (RunPod), otherwise use home directory
+if [[ -d "/workspace" ]]; then
+    MODEL_DIR="/workspace/models"
+    LOG_DIR="/workspace/logs"
 else
-    log "Model not found locally. Checking download options..."
-
-    # A. Try Azure Cache First
-    DOWNLOAD_SUCCESS=false
-    if [[ -n "${AZURE_STORAGE_ACCOUNT:-}" ]]; then
-        log "📥 Checking Azure..."
-        if az storage blob download \
-            --account-name "${AZURE_STORAGE_ACCOUNT}" \
-            --account-key "${AZURE_STORAGE_KEY}" \
-            --container-name models \
-            --name "llm/$MODEL_FILENAME" \
-            --file "$MODEL_PATH" 2>/dev/null; then
-            log "✓ Downloaded from Azure"
-            DOWNLOAD_SUCCESS=true
-        else
-            warn "Model not in Azure"
-        fi
-    fi
-
-    # B. Download from Hugging Face if Azure failed
-    if [[ "$DOWNLOAD_SUCCESS" = false ]]; then
-        log "📥 Downloading from Hugging Face..."
-        
-        # Check for HF_TOKEN
-        if [[ -z "${HF_TOKEN:-}" ]]; then
-            warn "HF_TOKEN is not set. You may hit rate limits or fail on gated models."
-            TOKEN_ARG=""
-        else
-            log "Authenticated using HF_TOKEN"
-            TOKEN_ARG="--token $HF_TOKEN"
-        fi
-
-        # Use huggingface-cli for robust download (handles redirects/LFS better than raw curl)
-        huggingface-cli download \
-            $TOKEN_ARG \
-            "$HF_REPO" \
-            "$MODEL_FILENAME" \
-            --local-dir "$MODEL_DIR" \
-            --local-dir-use-symlinks False
-
-        if [[ -f "$MODEL_PATH" ]]; then
-            log "✓ Download complete"
-        else
-            err "Download failed."
-            exit 1
-        fi
-    fi
+    MODEL_DIR="$HOME/models"
+    LOG_DIR="$HOME/.ollama/logs"
 fi
 
+# Q8 model is split into parts
+MODEL_DOWNLOAD_DIR="$MODEL_DIR/$MODEL_SUBDIR"
+MODEL_PART1="$MODEL_DOWNLOAD_DIR/Llama-3.3-70B-Instruct-Q8_0-00001-of-00002.gguf"
+MODEL_PART2="$MODEL_DOWNLOAD_DIR/Llama-3.3-70B-Instruct-Q8_0-00002-of-00002.gguf"
+
+# --- Helper Functions ---
+log() { echo -e "[\033[1;34mINFO\033[0m] $1"; }
+warn() { echo -e "[\033[1;33mWARN\033[0m] $1"; }
+error() { echo -e "[\033[1;31mERROR\033[0m] $1"; exit 1; }
+
+# Check if running with sufficient permissions
+check_sudo() {
+    if [[ $EUID -ne 0 ]]; then
+        if ! sudo -n true 2>/dev/null; then
+            error "This script requires sudo privileges. Please run with sudo or ensure you have sudo access."
+        fi
+        SUDO="sudo"
+    else
+        SUDO=""
+    fi
+}
+
+log "🚀 Starting Setup: Llama 3.3 70B (Q8) via Ollama"
+
+# Check permissions first
+check_sudo
+
+# Create necessary directories
+mkdir -p "$MODEL_DIR"
+mkdir -p "$LOG_DIR"
+
+# 1. Install Dependencies (Download tools only)
+if command -v apt-get &> /dev/null; then
+    log "📦 Installing curl and git..."
+    $SUDO apt-get update || warn "Failed to update apt cache"
+    $SUDO apt-get install -y curl git python3-pip python3-venv || error "Failed to install system dependencies"
+fi
+
+# Install Python packages in user space to avoid permission issues
+log "📦 Installing Python packages..."
+pip install --user -q huggingface-hub openai || error "Failed to install Python packages"
+
+# 2. Install Ollama (The Engine)
+if ! command -v ollama &> /dev/null; then
+    log "⚡ Installing Ollama (Pre-compiled with CUDA support)..."
+    curl -fsSL https://ollama.com/install.sh | $SUDO sh || error "Failed to install Ollama"
+else
+    log "✓ Ollama is already installed"
+fi
+
+# 3. Start Ollama Server in the background
+log "🔄 Starting Ollama background server..."
+OLLAMA_LOG="$LOG_DIR/ollama.log"
+ollama serve > "$OLLAMA_LOG" 2>&1 &
+OLLAMA_PID=$!
+
+# Wait for Ollama to be ready (with timeout)
+log "⏳ Waiting for Ollama server to start..."
+for i in {1..30}; do
+    if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
+        log "✓ Ollama server is running (PID: $OLLAMA_PID)"
+        break
+    fi
+    if [[ $i -eq 30 ]]; then
+        error "Ollama server failed to start. Check logs at: $OLLAMA_LOG"
+    fi
+    sleep 1
+done
+
+# 4. Download the Q8 Model (split into 2 parts)
+if [[ -f "$MODEL_PART1" ]] && [[ -f "$MODEL_PART2" ]]; then
+    log "✓ Model files found:"
+    log "   Part 1: $MODEL_PART1"
+    log "   Part 2: $MODEL_PART2"
+else
+    log "📥 Downloading Llama 3.3 70B Q8 (~75GB in 2 parts)..."
+    log "   (This uses high-speed connection, please wait)"
+
+    # Check for HuggingFace token
+    HF_TOKEN_ARG=""
+    if [[ -n "${HF_TOKEN:-}" ]]; then
+        log "✓ Using HuggingFace authentication token"
+        HF_TOKEN_ARG="--token $HF_TOKEN"
+    else
+        warn "HF_TOKEN not set. You may encounter rate limits or issues with gated models."
+        warn "Set HF_TOKEN environment variable if download fails."
+    fi
+
+    # Create download directory
+    mkdir -p "$MODEL_DOWNLOAD_DIR"
+
+    # Download the entire Q8_0 subdirectory (contains both parts)
+    log "📥 Downloading model parts (this will take a while)..."
+    if ! huggingface-cli download \
+        $HF_TOKEN_ARG \
+        "$HF_REPO" \
+        --include "$MODEL_SUBDIR/*" \
+        --local-dir "$MODEL_DIR" \
+        --local-dir-use-symlinks False; then
+        error "Failed to download model from HuggingFace. Check your internet connection and HF_TOKEN."
+    fi
+
+    # Verify both parts downloaded successfully
+    if [[ ! -f "$MODEL_PART1" ]]; then
+        error "Model part 1 not found after download. Expected at: $MODEL_PART1"
+    fi
+    if [[ ! -f "$MODEL_PART2" ]]; then
+        error "Model part 2 not found after download. Expected at: $MODEL_PART2"
+    fi
+
+    log "✓ Both model parts downloaded successfully"
+fi
+
+# 5. Create the Custom Model in Ollama
+log "⚙️  Registering Q8 Model with Ollama..."
+
+# Create Modelfile - Ollama will auto-load both parts when given part 1
+MODELFILE_PATH="$MODEL_DIR/Modelfile"
+cat > "$MODELFILE_PATH" <<EOF
+FROM $MODEL_PART1
+PARAMETER num_ctx 8192
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+EOF
+
+log "📄 Modelfile created, referencing: $MODEL_PART1"
+log "   (Ollama will automatically load both parts)"
+
+# This compiles the model definition (takes a few seconds)
+log "🔨 Creating Ollama model '$MODEL_NAME' (this may take a moment)..."
+if ! ollama create "$MODEL_NAME" -f "$MODELFILE_PATH"; then
+    error "Failed to create Ollama model. Check if the model files are valid."
+fi
+
+log "✓ Model '$MODEL_NAME' registered successfully"
+
+# 6. Python Client Script (To use it programmatically)
+TEST_SCRIPT="$MODEL_DIR/test_ollama.py"
+log "📝 Creating test script at: $TEST_SCRIPT"
+
+cat > "$TEST_SCRIPT" <<EOF
+#!/usr/bin/env python3
+from openai import OpenAI
+import time
+import sys
+
+print("🤖 Connecting to Llama 3.3 70B (Q8)...")
+
+try:
+    # Ollama provides an OpenAI-compatible API
+    client = OpenAI(
+        base_url='http://localhost:11434/v1',
+        api_key='ollama',  # required, but unused
+    )
+
+    prompt = "Q: Analyze the pros and cons of using Rust vs C++ for low-level systems programming. A: "
+    print(f"\nPrompt: {prompt}")
+
+    start = time.time()
+    response = client.completions.create(
+        model="$MODEL_NAME",
+        prompt=prompt,
+        max_tokens=500
+    )
+    end = time.time()
+
+    print("\nGenerated Output:")
+    print(response.choices[0].text)
+    print(f"\n⏱️  Time taken: {end - start:.2f}s")
+
+except Exception as e:
+    print(f"\n❌ Error: {e}", file=sys.stderr)
+    print("Make sure Ollama server is running and the model is loaded.", file=sys.stderr)
+    sys.exit(1)
+EOF
+
+chmod +x "$TEST_SCRIPT"
+
 echo ""
-log "✅ LLM environment ready!"
+log "✅ Setup Complete!"
 echo ""
-echo "Example usage (Q8 GGUF):"
-echo "  cd /workspace/repos/llm-showcase"
-echo "  python -c 'from llama_cpp import Llama; llm = Llama(model_path=\"$MODEL_PATH\", verbose=False); print(llm(\"Q: Hello! A: \", max_tokens=32))'"
+log "📍 Model location: $MODEL_DOWNLOAD_DIR"
+log "   Part 1: $(basename "$MODEL_PART1")"
+log "   Part 2: $(basename "$MODEL_PART2")"
+log "📍 Ollama logs: $OLLAMA_LOG"
+log "📍 Test script: $TEST_SCRIPT"
 echo ""
-/bin/bash
+log "🎯 Next steps:"
+log "  1. Run test script: python3 $TEST_SCRIPT"
+log "  2. Interactive chat: ollama run $MODEL_NAME"
+log "  3. List models: ollama list"
+echo ""
