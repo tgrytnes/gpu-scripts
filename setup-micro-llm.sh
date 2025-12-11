@@ -2,6 +2,7 @@
 set -euo pipefail
 
 log() { echo -e "[\033[1;34mINFO\033[0m] $1"; }
+warn() { echo -e "[\033[1;33mWARN\033[0m] $1"; }
 
 log "🤖 Starting Ollama in Docker..."
 
@@ -22,21 +23,24 @@ docker run -d \
 log "⏳ Waiting for Ollama to start..."
 sleep 5
 
-log "📥 Pulling Qwen3 4B 2507 model (July 2025 release)..."
-docker exec ollama ollama pull qwen3:4b-2507
+log "📥 Pulling Qwen3 4B model (April 2025 release)..."
+docker exec ollama ollama pull qwen3:4b
 
 log "✅ Testing model..."
-docker exec ollama ollama run qwen3:4b-2507 "Say hello in one sentence"
+docker exec ollama ollama run qwen3:4b "Say hello in one sentence"
+
+log "🗑️  Removing old Qwen2.5 1.5B model to save space..."
+docker exec ollama ollama rm qwen2.5:1.5b || warn "Old model not found"
 
 log "🎉 Ollama Docker container running!"
 log "📍 API: http://$(hostname -I | awk '{print $1}'):11434"
 log ""
-log "💡 Model: Qwen3 4B 2507 (Alibaba, July 2025)"
-log "   - 74% MMLU-Pro, 67% GPQA Diamond"
-log "   - Thinking mode available"
+log "💡 Model: Qwen3 4B (Alibaba, April 2025)"
+log "   - Better than Qwen2.5 in reasoning and multilingual"
 log "   - Optimized for 4GB RAM systems"
 log ""
 log "🔧 Management commands:"
 log "   docker stop ollama    # Stop container"
 log "   docker start ollama   # Start container"
 log "   docker logs -f ollama # View logs"
+log "   docker exec ollama ollama list  # List all models"
