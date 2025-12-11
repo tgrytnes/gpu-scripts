@@ -23,24 +23,22 @@ docker run -d \
 log "⏳ Waiting for Ollama to start..."
 sleep 5
 
-log "📥 Pulling Qwen3 4B model (April 2025 release)..."
-docker exec ollama ollama pull qwen3:4b
+log "📥 Pulling Qwen3 1.7B model (optimized for 4GB systems)..."
+docker exec ollama ollama pull qwen3:1.7b
 
 log "✅ Testing model..."
-docker exec ollama ollama run qwen3:4b "Say hello in one sentence"
-
-log "🗑️  Removing old Qwen2.5 1.5B model to save space..."
-docker exec ollama ollama rm qwen2.5:1.5b || warn "Old model not found"
+docker exec ollama ollama run qwen3:1.7b "Say hello in one sentence"
 
 log "🎉 Ollama Docker container running!"
 log "📍 API: http://$(hostname -I | awk '{print $1}'):11434"
 log ""
-log "💡 Model: Qwen3 4B (Alibaba, April 2025)"
-log "   - Better than Qwen2.5 in reasoning and multilingual"
-log "   - Optimized for 4GB RAM systems"
+log "💡 Model: Qwen3 1.7B (Alibaba, April 2025)"
+log "   - Fits comfortably on 4GB RAM system (~1.5GB)"
+log "   - Performs comparable to Qwen2.5 3B"
+log "   - Good for chat, summaries, quick answers"
 log ""
 log "🔧 Management commands:"
 log "   docker stop ollama    # Stop container"
 log "   docker start ollama   # Start container"
 log "   docker logs -f ollama # View logs"
-log "   docker exec ollama ollama list  # List all models"
+log "   docker exec ollama ollama list  # List models"
