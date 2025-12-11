@@ -43,16 +43,18 @@ download_file() {
     fi
 }
 
-echo "🎥 Setting up Wan 2.1 (Image-to-Video) Environment"
-echo "--------------------------------------------------"
+echo "🎥 Setting up Wan 2.2 (5B TI2V - Optimized for RTX 4090)"
+echo "=========================================================="
+echo "✨ Features: 720p @ 24fps, Text-to-Video & Image-to-Video"
+echo "✨ Speed: Under 9 minutes for 5-second video on RTX 4090"
+echo "=========================================================="
 
 # 1. Install System Tools
 echo "🛠️ Updating system tools..."
 apt-get update && apt-get install -y git wget aria2 libgl1-mesa-glx > /dev/null 2>&1
 
-# 1.5 ✅ FIX: Upgrade PyTorch to fix the 'register_pytree_node' error
-# We need to ensure Torch is new enough to handle the latest Transformers library
-echo "🔄 Upgrading PyTorch to match new Transformers requirements..."
+# 1.5 ✅ FIX: Upgrade PyTorch to fix compatibility issues
+echo "🔄 Upgrading PyTorch and dependencies..."
 pip install --upgrade torch torchvision torchaudio xformers --index-url https://download.pytorch.org/whl/cu121
 
 # 1.6 ✅ FIX: Set CUDA library paths so PyTorch can find CUDA runtime
@@ -63,54 +65,70 @@ export LD_LIBRARY_PATH=/opt/conda/lib:$LD_LIBRARY_PATH
 # 2. Setup ComfyUI
 echo "🛋️ Cloning ComfyUI..."
 if [ ! -d "$COMFY_BASE" ]; then
-    git clone "$COMFY_REPO" "$COMFY_BASE"
+    git clone --depth 1 "$COMFY_REPO" "$COMFY_BASE"
 fi
 
 # Install Manager
 if [ ! -d "${COMFY_BASE}/custom_nodes/ComfyUI-Manager" ]; then
-    cd "${COMFY_BASE}/custom_nodes" && git clone "$MANAGER_REPO"
+    cd "${COMFY_BASE}/custom_nodes" && git clone --depth 1 "$MANAGER_REPO"
 fi
 
 # 3. Install Python Dependencies
 echo "🐍 Installing Python Requirements..."
-# Upgrade pip and install standard Comfy requirements
 pip install --upgrade pip
 cd "$COMFY_BASE" && pip install -r requirements.txt
-# Install extra dependencies often needed for Wan/Video
 pip install opencv-python imageio imageio-ffmpeg
 
-# 4. DOWNLOAD WAN 2.1 MODELS
-# We download directly to ComfyUI folders to save space (no double storage)
-echo "📥 Downloading Massive Wan 2.1 Models (This may take a while)..."
+# 4. DOWNLOAD WAN 2.2 (5B) MODELS - Optimized for RTX 4090
+echo "📥 Downloading Wan 2.2 5B Models (Perfect for RTX 4090)..."
+echo "   This will take 15-30 minutes depending on your connection"
 
-# --- 4a. The Main Diffusion Model (14B - 480p version) ---
-# Size: ~28GB. This is the heavy lifter.
-# URL is for the FP16 480p version which is the standard balance of quality/speed.
-URL_DIFF="https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/diffusion_models/wan2.1_i2v_480p_14B_fp16.safetensors"
-download_file "$URL_DIFF" "${COMFY_BASE}/models/diffusion_models" "wan2.1_i2v_480p_14B_fp16.safetensors"
+# --- 4a. The Main 5B Diffusion Model (TI2V - Text+Image to Video) ---
+# Size: ~10GB. Supports BOTH text-to-video AND image-to-video in one model!
+# This is the 720p@24fps version optimized for consumer GPUs
+URL_DIFF="https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_ti2v_5B_fp16.safetensors"
+download_file "$URL_DIFF" "${COMFY_BASE}/models/diffusion_models" "wan2.2_ti2v_5B_fp16.safetensors"
 
 # --- 4b. Text Encoder (UMT5 XXL) ---
-# Size: ~6GB (FP8 scaled). Required for Wan to understand prompts.
-URL_TEXT="https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+# Size: ~6GB (FP8 scaled). Same as Wan 2.1, required for understanding prompts.
+URL_TEXT="https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
 download_file "$URL_TEXT" "${COMFY_BASE}/models/text_encoders" "umt5_xxl_fp8_e4m3fn_scaled.safetensors"
 
-# --- 4c. VAE (Video Autoencoder) ---
-URL_VAE="https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors"
-download_file "$URL_VAE" "${COMFY_BASE}/models/vae" "wan_2.1_vae.safetensors"
-
-# --- 4d. CLIP Vision (Required for Image-to-Video input) ---
-URL_CLIP="https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors"
-download_file "$URL_CLIP" "${COMFY_BASE}/models/clip_vision" "clip_vision_h.safetensors"
+# --- 4c. Wan 2.2 VAE (NEW - Different from 2.1!) ---
+# Size: ~1.4GB. Advanced Wan2.2-VAE with 16×16×4 compression ratio
+URL_VAE="https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan2.2_vae.safetensors"
+download_file "$URL_VAE" "${COMFY_BASE}/models/vae" "wan2.2_vae.safetensors"
 
 echo "---------------------------------------"
-echo "✅ Wan 2.1 Setup Complete!"
+echo "✅ Wan 2.2 (5B) Setup Complete!"
+echo ""
+echo "📊 MODEL SPECS:"
+echo "   • Model: Wan 2.2 TI2V 5B (720p @ 24fps)"
+echo "   • VRAM Required: ~12-16GB (Perfect for RTX 4090!)"
+echo "   • Speed: <9 minutes for 5-second 720p video"
+echo "   • Capabilities: Text-to-Video + Image-to-Video in ONE model"
 echo ""
 echo "🚀 TO START COMFYUI:"
 echo "   cd /workspace/ComfyUI"
 echo "   python main.py --listen 0.0.0.0"
 echo ""
-echo "💡 USAGE TIP:"
-echo "   1. Open ComfyUI."
-echo "   2. Load the standard Wan 2.1 Image-to-Video workflow."
-echo "   3. Ensure your Checkpoint Loader selects 'wan2.1_i2v_480p_14B_fp16.safetensors'."
+echo "💡 USAGE TIPS:"
+echo "   1. Update ComfyUI to latest version (Menu → Manager → Update)"
+echo "   2. Load workflow: Menu → Workflow Templates → Video → 'Wan2.2 5B'"
+echo "   3. Or create custom workflow with these models:"
+echo "      - Diffusion: wan2.2_ti2v_5B_fp16.safetensors"
+echo "      - VAE: wan2.2_vae.safetensors"
+echo "      - Text Encoder: umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+echo ""
+echo "⚡ WHY WAN 2.2 5B?"
+echo "   • 2.5x faster than competing models"
+echo "   • 720p native (vs 480p in Wan 2.1)"
+echo "   • Better motion quality (+83% more training videos)"
+echo "   • Cinematic aesthetics with precise control"
+echo "   • ONE model for both T2V and I2V tasks"
+echo ""
+echo "🎯 RECOMMENDED SETTINGS FOR RTX 4090:"
+echo "   • Resolution: 1280x704 or 704x1280 (720p)"
+echo "   • Frames: 121 frames (5 seconds @ 24fps)"
+echo "   • Enable model offloading if needed"
 echo "---------------------------------------"
