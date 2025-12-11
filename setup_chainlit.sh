@@ -1,4 +1,3 @@
-cat > setup_chainlit.sh << 'EOF'
 #!/bin/bash
 
 echo "Setting up ChainLit Query Interface..."
@@ -9,13 +8,14 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+RUN pip install --no-cache-dir chromadb
+
 RUN pip install --no-cache-dir \
     chainlit \
     langchain \
     langchain-community \
     langchain-ollama \
-    langchain-chroma \
-    chromadb
+    langchain-chroma
 
 EXPOSE 8000
 
@@ -103,6 +103,3 @@ echo ""
 echo "Done! Access at http://YOUR_IP:8000"
 echo ""
 
-EOF
-
-chmod +x setup_chainlit.sh
