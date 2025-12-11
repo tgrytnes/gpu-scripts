@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # --- Configuration ---
-# Llama 3.3 70B (Q5_K_S - 48.7GB, single file)
-HF_REPO="bartowski/Llama-3.3-70B-Instruct-GGUF"
-MODEL_FILE="Llama-3.3-70B-Instruct-Q5_K_S.gguf"
-MODEL_NAME="llama3.3-70b-q5"
+# Qwen3 32B Instruct (Q5_K_M - ~22GB, single file)
+HF_REPO="bartowski/Qwen3-32B-Instruct-GGUF"
+MODEL_FILE="Qwen3-32B-Instruct-Q5_K_M.gguf"
+MODEL_NAME="qwen3-32b-q5"
 
 # Use /workspace if it exists (RunPod), otherwise use home directory
 if [[ -d "/workspace" ]]; then
@@ -35,7 +35,8 @@ check_sudo() {
     fi
 }
 
-log "🚀 Starting Setup: Llama 3.3 70B (Q5_K_S) via Ollama"
+log "🚀 Starting Setup: Qwen3 32B Instruct (Q5_K_M) via Ollama"
+log "   Alibaba Cloud | April 2025 Release | Optimized for RTX 4090"
 
 # Check permissions first
 check_sudo
@@ -82,18 +83,18 @@ for i in {1..30}; do
     sleep 1
 done
 
-# 4. Download the Q6_K Model (single file - no splits!)
+# 4. Download the Q5_K_M Model (single file)
 if [[ -f "$MODEL_PATH" ]]; then
     log "✓ Model file found: $MODEL_PATH"
     MODEL_SIZE=$(stat -c%s "$MODEL_PATH" 2>/dev/null || stat -f%z "$MODEL_PATH" 2>/dev/null)
     MODEL_SIZE_GB=$((MODEL_SIZE / 1024 / 1024 / 1024))
     log "   File size: ${MODEL_SIZE_GB}GB"
 else
-    log "📥 Downloading Llama 3.3 70B Q5_K_S (48.7GB, single file)..."
+    log "📥 Downloading Qwen3 32B Q5_K_M (~22GB, single file)..."
     log "   (This uses high-speed connection, please wait)"
 
     # Check available disk space
-    REQUIRED_SPACE_GB=50
+    REQUIRED_SPACE_GB=25
     AVAILABLE_SPACE_KB=$(df "$MODEL_DIR" | tail -1 | awk '{print $4}')
     AVAILABLE_SPACE_GB=$((AVAILABLE_SPACE_KB / 1024 / 1024))
     
@@ -135,18 +136,19 @@ else
 fi
 
 # 5. Create the Custom Model in Ollama
-log "⚙️  Registering Q6_K Model with Ollama..."
+log "⚙️  Registering Q5_K_M Model with Ollama..."
 
-# Create Modelfile
+# Create Modelfile with Qwen3-optimized parameters
 MODELFILE_PATH="$MODEL_DIR/Modelfile"
 cat > "$MODELFILE_PATH" <<EOF
 FROM $MODEL_PATH
-PARAMETER num_ctx 8192
+PARAMETER num_ctx 32768
 PARAMETER temperature 0.7
 PARAMETER top_p 0.9
 EOF
 
 log "📄 Modelfile created, referencing: $MODEL_PATH"
+log "   Context window: 32K tokens (expandable to 128K)"
 
 # Remove existing model if present
 if ollama list | grep -q "$MODEL_NAME"; then
@@ -172,7 +174,8 @@ from openai import OpenAI
 import time
 import sys
 
-print("🤖 Connecting to Llama 3.3 70B (Q5_K_S)...")
+print("🤖 Connecting to Qwen3 32B Instruct (Q5_K_M)...")
+print("   Alibaba Cloud | April 2025 | 128K Context Window")
 
 try:
     # Ollama provides an OpenAI-compatible API
@@ -181,7 +184,7 @@ try:
         api_key='ollama',  # required, but unused
     )
 
-    prompt = "Q: Analyze the pros and cons of using Rust vs C++ for low-level systems programming. A: "
+    prompt = "Q: Explain the key differences between Vision Transformers (ViT) and CNNs for satellite image analysis. A: "
     print(f"\nPrompt: {prompt}")
 
     start = time.time()
@@ -216,6 +219,14 @@ log "  1. Run test script: python3 $TEST_SCRIPT"
 log "  2. Interactive chat: ollama run $MODEL_NAME"
 log "  3. List models: ollama list"
 echo ""
-log "ℹ️  Note: Q5_K_S quantization provides excellent quality (48.7GB)"
-log "   Alternative: Q4_K_M is faster and smaller (~42GB) with very good quality"
+log "✨ Qwen3 32B Features:"
+log "   • Fits perfectly on RTX 4090 (24GB VRAM)"
+log "   • 128K token context window (vs 32K Llama)"
+log "   • Superior multilingual support (119 languages)"
+log "   • Strong in math, code, and reasoning tasks"
+log "   • Apache 2.0 license (fully open source)"
+echo ""
+log "💡 Alternative models for 4090:"
+log "   • Qwen3-30B-A3B (MoE, only 3B active, ~15GB)"
+log "   • Qwen3-14B (~10GB, more headroom)"
 echo ""
