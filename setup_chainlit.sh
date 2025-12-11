@@ -2,14 +2,19 @@
 
 echo "Setting up ChainLit Query Interface..."
 
-# Create Dockerfile for ChainLit
+# -------------------------------------------------------
+# 1. Create Dockerfile
+# FIX: No trailing backslash on the last pip line
+# -------------------------------------------------------
 cat > Dockerfile.chainlit << 'DOCKERFILE'
 FROM python:3.11-slim
 
 WORKDIR /app
 
+# Install heavy dependencies first to prevent hanging
 RUN pip install --no-cache-dir chromadb
 
+# Install the rest
 RUN pip install --no-cache-dir \
     chainlit \
     langchain \
@@ -24,7 +29,10 @@ DOCKERFILE
 
 echo "Dockerfile created"
 
-# Create ChainLit app
+# -------------------------------------------------------
+# 2. Create ChainLit app
+# FIX: Uses YOUR specific model name (qwen3:1.7b)
+# -------------------------------------------------------
 cat > chainlit_app.py << 'PYCODE'
 import chainlit as cl
 from langchain_ollama import OllamaLLM, OllamaEmbeddings
@@ -36,16 +44,24 @@ VECTOR_DB_DIR = "/app/chroma_db"
 
 @cl.on_chat_start
 async def start():
+    # Check if DB exists
     if not os.path.exists(VECTOR_DB_DIR):
-        await cl.Message(content="Vector database not found! Run ingestion first.").send()
+        await cl.Message(content="⚠️ Vector database not found! Please run the ingestion script first.").send()
         return
     
     await cl.Message(content="Initializing RAG system...").send()
     
+    # ------------------------------------------------------
+    # YOUR MODEL CONFIGURATION
+    # ------------------------------------------------------
+    # Ensure you have this embedding model, or change to "all-minilm"
     embeddings = OllamaEmbeddings(model="nomic-embed-text", base_url="http://localhost:11434")
+    
+    # YOUR SPECIFIC MODEL
+    llm = OllamaLLM(model="qwen3:1.7b", base_url="http://localhost:11434")
+    
     vectorstore = Chroma(persist_directory=VECTOR_DB_DIR, embedding_function=embeddings)
     retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
-    llm = OllamaLLM(model="qwen3:1.7b", base_url="http://localhost:11434")
     
     rag_chain = RetrievalQA.from_chain_type(
         llm=llm,
@@ -55,7 +71,7 @@ async def start():
     )
     
     cl.user_session.set("rag_chain", rag_chain)
-    await cl.Message(content="RAG system ready! Ask me anything.").send()
+    await cl.Message(content="✅ RAG system ready! Ask me anything.").send()
 
 @cl.on_message
 async def main(message: cl.Message):
@@ -67,10 +83,12 @@ async def main(message: cl.Message):
     msg = cl.Message(content="")
     await msg.send()
     
+    # Run the query
     result = rag_chain.invoke({"query": message.content})
     msg.content = result["result"]
     await msg.update()
     
+    # Show sources
     if result.get("source_documents"):
         sources = "\n\nSources:\n"
         for i, doc in enumerate(result["source_documents"], 1):
@@ -80,11 +98,11 @@ PYCODE
 
 echo "App created"
 
-# Build
+# 3. Build
 echo "Building image..."
 docker build -f Dockerfile.chainlit -t chainlit-rag .
 
-# Run
+# 4. Run
 echo "Starting container..."
 docker stop chainlit-rag 2>/dev/null || true
 docker rm chainlit-rag 2>/dev/null || true
@@ -96,10 +114,10 @@ docker run -d \
   -p 8000:8000 \
   chainlit-rag
 
-sleep 2
+echo "Waiting for start..."
+sleep 5
 docker ps | grep chainlit-rag
 
 echo ""
 echo "Done! Access at http://YOUR_IP:8000"
 echo ""
-
