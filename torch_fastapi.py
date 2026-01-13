@@ -56,16 +56,13 @@ def cleanup_memory():
 def load_llm(mode_name: str):
     global llm_model, llm_tokenizer, current_llm_mode
     if mode_name not in MODE_CONFIG:
-        # 400 Bad Request if model doesn't exist
         raise HTTPException(400, f"Unknown mode. Available: {list(MODE_CONFIG.keys())}")
     
     model_id = MODE_CONFIG[mode_name]
     
-    # Do nothing if already loaded
     if llm_model is not None and current_llm_mode == mode_name:
         return
 
-    # Unload previous model if exists
     if llm_model is not None:
         logger.info("Unloading previous model...")
         del llm_model
@@ -145,7 +142,7 @@ def compute_late_chunking(text: str, spans: List[List[int]], task: str = "retrie
 
 # --- API MODELS ---
 class LoadModelRequest(BaseModel):
-    model: str  # e.g., "speedster", "daily", "smart", "deepseek"
+    model: str
 
 class ChatMessage(BaseModel):
     role: str
@@ -179,17 +176,10 @@ app = FastAPI(lifespan=lifespan)
 
 @app.post("/load")
 async def manual_load_endpoint(req: LoadModelRequest):
-    """
-    Manually pre-load a model into GPU memory.
-    """
     async with model_lock:
         try:
             load_llm(req.model)
-            return {
-                "status": "ok", 
-                "message": f"Loaded model {req.model}", 
-                "model_id": MODE_CONFIG[req.model]
-            }
+            return {"status": "ok", "message": f"Loaded model {req.model}", "model_id": MODE_CONFIG[req.model]}
         except HTTPException as he:
             raise he
         except Exception as e:
@@ -199,7 +189,6 @@ async def manual_load_endpoint(req: LoadModelRequest):
 async def chat_endpoint(req: ChatRequest):
     async with model_lock:
         target_mode = req.model if req.model in MODE_CONFIG else DEFAULT_MODE
-        # Load logic handles skipping if already loaded
         load_llm(target_mode)
         
         prompt = llm_tokenizer.apply_chat_template([m.model_dump() for m in req.messages], tokenize=False, add_generation_prompt=True)

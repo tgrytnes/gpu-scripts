@@ -11,6 +11,7 @@ PYTHON_BIN="/usr/local/bin/python3.11"
 
 echo "🚀 Starting GPU Server Setup..."
 
+
 # ==========================================
 # 2. INSTALL PYTHON 3.11 (If missing)
 # ==========================================
@@ -70,6 +71,73 @@ poetry add torch torchvision torchaudio --source pytorch
 echo "📦 Adding FastAPI & AI Libraries..."
 # We explicitly add uvicorn[standard] to ensure the command exists
 poetry add "uvicorn[standard]" fastapi transformers accelerate bitsandbytes sentence-transformers einops protobuf scipy
+
+
+
+# ... (Previous parts of the script) ...
+
+# ==========================================
+# 4.5 SETUP CREDENTIALS & GIT
+# ==========================================
+echo "🔐 Configuring Credentials..."
+
+# 1. Define where to look for .env
+# Note: PROJECT_DIR is defined at the top of your script ($HOME/gpu-scripts)
+ENV_FILE="${PROJECT_DIR}/.env"
+
+# 2. Helper function to read .env securely using Python
+# (This avoids 'sourcing' the file which can be dangerous)
+get_env_var() {
+  local file="$1"
+  local key="$2"
+  if [[ ! -f "$file" ]]; then return; fi
+  
+  python3 - "$file" "$key" <<'PY'
+import sys
+
+env_file = sys.argv[1]
+target_key = sys.argv[2]
+
+try:
+    with open(env_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            # Skip comments and empty lines
+            if not line or line.startswith('#'):
+                continue
+            # Check for Key=Value
+            if '=' in line:
+                k, v = line.split('=', 1)
+                if k.strip() == target_key:
+                    # Remove surrounding quotes if present
+                    print(v.strip().strip("'").strip('"'))
+                    sys.exit(0)
+except Exception:
+    pass
+PY
+}
+
+# 3. Read Variables
+GITHUB_USERNAME=$(get_env_var "${ENV_FILE}" "GITHUB_USERNAME")
+GITHUB_TOKEN=$(get_env_var "${ENV_FILE}" "GITHUB_TOKEN")
+GIT_NAME=$(get_env_var "${ENV_FILE}" "GITHUB_NAME")
+GIT_EMAIL=$(get_env_var "${ENV_FILE}" "GITHUB_EMAIL")
+
+# 4. Configure Git Globally
+if [[ -n "${GIT_NAME}" && -n "${GIT_EMAIL}" ]]; then
+    echo "👤 Setting Git User: ${GIT_NAME}"
+    git config --global user.name "${GIT_NAME}"
+    git config --global user.email "${GIT_EMAIL}"
+fi
+
+# 5. Configure Git Credentials (for HTTPS cloning)
+if [[ -n "${GITHUB_USERNAME}" && -n "${GITHUB_TOKEN}" ]]; then
+    echo "🔑 Storing GitHub Credentials..."
+    git config --global credential.helper store
+    # This format is required for the credential helper
+    echo "https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com" > "${HOME}/.git-credentials"
+fi
+
 
 # ==========================================
 # 5. CREATE THE PYTHON SERVER FILE

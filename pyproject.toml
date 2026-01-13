@@ -11,7 +11,7 @@ torch = {version = "^2.5.1+cu121", source = "pytorch"}
 torchvision = {version = "^0.20.1+cu121", source = "pytorch"}
 torchaudio = {version = "^2.5.1+cu121", source = "pytorch"}
 fastapi = "^0.128.0"
-uvicorn = "^0.40.0"
+uvicorn = {extras = ["standard"], version = "^0.40.0"}
 transformers = "^4.57.3"
 accelerate = "^1.12.0"
 bitsandbytes = "^0.49.1"
