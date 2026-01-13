@@ -19,6 +19,8 @@ sentence-transformers = "^5.2.0"
 einops = "^0.8.1"
 protobuf = "^6.33.4"
 scipy = "^1.17.0"
+auto-gptq = "^0.7.1"
+python-dotenv = "^1.2.1"
 
 
 [[tool.poetry.source]]
