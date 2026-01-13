@@ -58,6 +58,8 @@ from contextlib import asynccontextmanager
 from typing import List, Optional
 from threading import Thread
 
+from transformers import AutoConfig
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -143,6 +145,7 @@ def load_llm(mode_name: str):
         del llm_tokenizer
         cleanup_memory()
 
+    # GPTQ branch (keep this)
     if "gptq" in model_id.lower():
         if AutoGPTQForCausalLM is None:
             raise HTTPException(500, "AutoGPTQ not available. Install auto-gptq.")
@@ -157,6 +160,21 @@ def load_llm(mode_name: str):
         current_llm_mode = mode_name
         return
 
+    # NEW: respect model’s built-in quantization (e.g., MXFP4)
+    config = AutoConfig.from_pretrained(model_id, token=HF_TOKEN, trust_remote_code=True)
+    if getattr(config, "quantization_config", None):
+        llm_tokenizer = AutoTokenizer.from_pretrained(model_id, token=HF_TOKEN, trust_remote_code=True)
+        llm_model = AutoModelForCausalLM.from_pretrained(
+            model_id,
+            device_map="auto",
+            trust_remote_code=True,
+            token=HF_TOKEN,
+            torch_dtype="auto",
+        )
+        current_llm_mode = mode_name
+        return
+
+    # Default: BitsAndBytes
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_compute_dtype=torch.float16,
@@ -171,6 +189,7 @@ def load_llm(mode_name: str):
         token=HF_TOKEN,
     )
     current_llm_mode = mode_name
+
 
 def load_embedding_model(model_id: Optional[str] = None):
     global embedding_model, EMBEDDING_MODEL_ID, embedding_backend
