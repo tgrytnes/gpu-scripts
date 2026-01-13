@@ -64,12 +64,12 @@ echo "🛡️  Forcing Poetry to use Python 3.11 (Bypassing Conda)..."
 poetry env use "$PYTHON_BIN"
 
 echo "📦 Adding PyTorch (CUDA 12.1)..."
-# We add the specific CUDA wheel source so we don't get the CPU version
 poetry source add --priority=explicit pytorch https://download.pytorch.org/whl/cu121
 poetry add torch torchvision torchaudio --source pytorch
 
 echo "📦 Adding FastAPI & AI Libraries..."
-poetry add fastapi uvicorn transformers accelerate bitsandbytes sentence-transformers einops protobuf scipy
+# We explicitly add uvicorn[standard] to ensure the command exists
+poetry add "uvicorn[standard]" fastapi transformers accelerate bitsandbytes sentence-transformers einops protobuf scipy
 
 # ==========================================
 # 5. CREATE THE PYTHON SERVER FILE
@@ -134,16 +134,13 @@ def cleanup_memory():
 def load_llm(mode_name: str):
     global llm_model, llm_tokenizer, current_llm_mode
     if mode_name not in MODE_CONFIG:
-        # 400 Bad Request if model doesn't exist
         raise HTTPException(400, f"Unknown mode. Available: {list(MODE_CONFIG.keys())}")
     
     model_id = MODE_CONFIG[mode_name]
     
-    # Do nothing if already loaded
     if llm_model is not None and current_llm_mode == mode_name:
         return
 
-    # Unload previous model if exists
     if llm_model is not None:
         logger.info("Unloading previous model...")
         del llm_model
@@ -223,7 +220,7 @@ def compute_late_chunking(text: str, spans: List[List[int]], task: str = "retrie
 
 # --- API MODELS ---
 class LoadModelRequest(BaseModel):
-    model: str  # e.g., "speedster", "daily", "smart", "deepseek"
+    model: str
 
 class ChatMessage(BaseModel):
     role: str
@@ -257,17 +254,10 @@ app = FastAPI(lifespan=lifespan)
 
 @app.post("/load")
 async def manual_load_endpoint(req: LoadModelRequest):
-    """
-    Manually pre-load a model into GPU memory.
-    """
     async with model_lock:
         try:
             load_llm(req.model)
-            return {
-                "status": "ok", 
-                "message": f"Loaded model {req.model}", 
-                "model_id": MODE_CONFIG[req.model]
-            }
+            return {"status": "ok", "message": f"Loaded model {req.model}", "model_id": MODE_CONFIG[req.model]}
         except HTTPException as he:
             raise he
         except Exception as e:
@@ -277,7 +267,6 @@ async def manual_load_endpoint(req: LoadModelRequest):
 async def chat_endpoint(req: ChatRequest):
     async with model_lock:
         target_mode = req.model if req.model in MODE_CONFIG else DEFAULT_MODE
-        # Load logic handles skipping if already loaded
         load_llm(target_mode)
         
         prompt = llm_tokenizer.apply_chat_template([m.model_dump() for m in req.messages], tokenize=False, add_generation_prompt=True)
@@ -323,14 +312,22 @@ def health():
 EOF
 
 # ==========================================
-# 6. FINISH
+# 6. LAUNCH SERVER
 # ==========================================
 echo ""
 echo "✅ Setup Complete!"
+echo "🚀 Starting FastAPI Server on Port 8000..."
 echo "--------------------------------------------------------"
-echo "To start your server, run these commands:"
-echo ""
-echo "  export HF_TOKEN='your_token_here'"
-echo "  cd $PROJECT_DIR"
-echo "  poetry run uvicorn torch_fastapi:app --host 0.0.0.0 --port 8000"
-echo "--------------------------------------------------------"
+
+cd "$PROJECT_DIR"
+
+# Warn if HF_TOKEN is missing
+if [[ -z "$HF_TOKEN" ]]; then
+    echo "⚠️  NOTE: HF_TOKEN is not set. If accessing gated models, export it first."
+fi
+
+# --no-root fixes the "No file/folder found for package" error
+poetry install --no-root
+
+# Run uvicorn via python -m to avoid path issues
+exec poetry run python -m uvicorn torch_fastapi:app --host 0.0.0.0 --port 8000
