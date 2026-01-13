@@ -1,0 +1,75 @@
+[33mcommit 8ab7dab071b9811f5abe50a54cf6133c846a21d2[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: tgrytnes <108715414+tgrytnes@users.noreply.github.com>
+Date:   Thu Dec 11 15:24:17 2025 +0100
+
+    Delete setup-langchain.sh
+
+[1mdiff --git a/setup-langchain.sh b/setup-langchain.sh[m
+[1mdeleted file mode 100644[m
+[1mindex f57f72f..0000000[m
+[1m--- a/setup-langchain.sh[m
+[1m+++ /dev/null[m
+[36m@@ -1,63 +0,0 @@[m
+[31m-#!/bin/bash[m
+[31m-[m
+[31m-echo "🚀 Setting up LangChain container..."[m
+[31m-[m
+[31m-# Create working directory[m
+[31m-mkdir -p ~/langchain-projects[m
+[31m-cd ~/langchain-projects[m
+[31m-[m
+[31m-# Create Dockerfile[m
+[31m-cat > Dockerfile << 'EOF'[m
+[31m-FROM python:3.11-slim[m
+[31m-[m
+[31m-WORKDIR /app[m
+[31m-[m
+[31m-# Install LangChain and dependencies[m
+[31m-RUN pip install --no-cache-dir \[m
+[31m-    langchain \[m
+[31m-    langchain-community \[m
+[31m-    langchain-ollama \[m
+[31m-    requests \[m
+[31m-    python-dotenv[m
+[31m-[m
+[31m-# Keep container running[m
+[31m-CMD ["tail", "-f", "/dev/null"][m
+[31m-EOF[m
+[31m-[m
+[31m-# Build the image[m
+[31m-echo "📦 Building Docker image..."[m
+[31m-docker build -t langchain-dev .[m
+[31m-[m
+[31m-# Stop and remove existing container if it exists[m
+[31m-docker stop langchain 2>/dev/null || true[m
+[31m-docker rm langchain 2>/dev/null || true[m
+[31m-[m
+[31m-# Run the container (using host network for simplicity)[m
+[31m-echo "🐳 Starting LangChain container..."[m
+[31m-docker run -d \[m
+[31m-  --name langchain \[m
+[31m-  --network host \[m
+[31m-  -v ~/langchain-projects:/app \[m
+[31m-  -e OLLAMA_HOST=http://localhost:11434 \[m
+[31m-  langchain-dev[m
+[31m-[m
+[31m-# Create test script[m
+[31m-cat > test_ollama.py << 'EOF'[m
+[31m-from langchain_ollama import OllamaLLM[m
+[31m-[m
+[31m-llm = OllamaLLM([m
+[31m-    model="qwen3:1.7b",[m
+[31m-    base_url="http://localhost:11434"[m
+[31m-)[m
+[31m-[m
+[31m-response = llm.invoke("Hello! Respond in one sentence.")[m
+[31m-print(response)[m
+[31m-EOF[m
+[31m-[m
+[31m-echo "✅ Setup complete!"[m
+[31m-echo ""[m
+[31m-echo "To test, run:"[m
+[31m-echo "  docker exec -it langchain python /app/test_ollama.py"[m
+[31m-echo ""[m
+[31m-echo "To enter container:"[m
+[31m-echo "  docker exec -it langchain bash"[m
