@@ -1,7 +1,8 @@
-INFO:     Started server process [53832]
+INFO:     Started server process [84876]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:46782 - "GET /health HTTP/1.1" 200 OK
 `torch_dtype` is deprecated! Use `dtype` instead!
 `torch_dtype` is deprecated! Use `dtype` instead!
 WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
@@ -30,57 +31,20 @@ WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_imple
 WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
 WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
 INFO:accelerate.utils.modeling:We will use 90% of the memory on device 0 for storing the model, and 10% for the buffer to avoid OOM. You can set `max_memory` in to a higher value to use more memory (at your own risk).
-Encoding:   0%|          | 0/1 [00:00<?, ?it/s]Encoding: 100%|██████████| 1/1 [00:00<00:00,  3.11it/s]Encoding: 100%|██████████| 1/1 [00:00<00:00,  3.10it/s]
-INFO:     127.0.0.1:55544 - "POST /api/embeddings HTTP/1.1" 200 OK
-INFO:     127.0.0.1:47542 - "POST /api/embeddings HTTP/1.1" 500 Internal Server Error
+Encoding:   0%|          | 0/1 [00:00<?, ?it/s]Encoding: 100%|██████████| 1/1 [00:00<00:00,  2.78it/s]Encoding: 100%|██████████| 1/1 [00:00<00:00,  2.77it/s]
+INFO:     127.0.0.1:46792 - "POST /api/embeddings HTTP/1.1" 200 OK
+INFO:accelerate.utils.modeling:We will use 90% of the memory on device 0 for storing the model, and 10% for the buffer to avoid OOM. You can set `max_memory` in to a higher value to use more memory (at your own risk).
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:05<00:16,  5.65s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:12<00:12,  6.20s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:18<00:06,  6.32s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:20<00:00,  4.45s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:20<00:00,  5.07s/it]
+Setting `pad_token_id` to `eos_token_id`:151643 for open-end generation.
+INFO:     127.0.0.1:59184 - "POST /api/generate HTTP/1.1" 200 OK
+Setting `pad_token_id` to `eos_token_id`:151643 for open-end generation.
+INFO:     127.0.0.1:48466 - "POST /api/generate HTTP/1.1" 200 OK
+Setting `pad_token_id` to `eos_token_id`:151643 for open-end generation.
+INFO:     127.0.0.1:43556 - "POST /api/generate HTTP/1.1" 200 OK
+INFO:accelerate.utils.modeling:We will use 90% of the memory on device 0 for storing the model, and 10% for the buffer to avoid OOM. You can set `max_memory` in to a higher value to use more memory (at your own risk).
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:02<00:04,  2.21s/it]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:05<00:02,  2.69s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.77s/it]
+INFO:     127.0.0.1:43112 - "POST /api/generate HTTP/1.1" 500 Internal Server Error
 ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/huggingface_hub/utils/_http.py", line 402, in hf_raise_for_status
-    response.raise_for_status()
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/requests/models.py", line 1026, in raise_for_status
-    raise HTTPError(http_error_msg, response=self)
-requests.exceptions.HTTPError: 401 Client Error: Unauthorized for url: https://huggingface.co/nomic-embed-text/resolve/main/config.json
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/transformers/utils/hub.py", line 479, in cached_files
-    hf_hub_download(
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
-    return fn(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1007, in hf_hub_download
-    return _hf_hub_download_to_cache_dir(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1114, in _hf_hub_download_to_cache_dir
-    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1655, in _raise_on_head_call_error
-    raise head_call_error
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1543, in _get_metadata_or_catch_error
-    metadata = get_hf_file_metadata(
-               ^^^^^^^^^^^^^^^^^^^^^
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
-    return fn(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1460, in get_hf_file_metadata
-    r = _request_wrapper(
-        ^^^^^^^^^^^^^^^^^
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 283, in _request_wrapper
-    response = _request_wrapper(
-               ^^^^^^^^^^^^^^^^^
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 307, in _request_wrapper
-    hf_raise_for_status(response)
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/huggingface_hub/utils/_http.py", line 452, in hf_raise_for_status
-    raise _format(RepositoryNotFoundError, message, response) from e
-huggingface_hub.errors.RepositoryNotFoundError: 401 Client Error. (Request ID: Root=1-69666675-5dc79448472538f2109ddbc5;7e8a1df9-5e76-426c-ab2f-333372479bf3)
-
-Repository Not Found for url: https://huggingface.co/nomic-embed-text/resolve/main/config.json.
-Please make sure you specified the correct `repo_id` and `repo_type`.
-If you are trying to access a private or gated repo, make sure you are authenticated. For more details, see https://huggingface.co/docs/huggingface_hub/authentication
-Invalid username or password.
-
-The above exception was the direct cause of the following exception:
-
 Traceback (most recent call last):
   File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 416, in run_asgi
     result = await app(  # type: ignore[func-returns-value]
@@ -125,51 +89,88 @@ Traceback (most recent call last):
   File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/fastapi/routing.py", line 243, in run_endpoint_function
     return await dependant.call(**values)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/gpu-scripts/torch_fastapi.py", line 304, in embeddings_endpoint
-    load_embedding_model(req.model)
-  File "/root/gpu-scripts/torch_fastapi.py", line 164, in load_embedding_model
-    embedding_model = AutoModel.from_pretrained(
-                      ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/transformers/models/auto/auto_factory.py", line 508, in from_pretrained
-    resolved_config_file = cached_file(
-                           ^^^^^^^^^^^^
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/transformers/utils/hub.py", line 322, in cached_file
-    file = cached_files(path_or_repo_id=path_or_repo_id, filenames=[filename], **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/transformers/utils/hub.py", line 511, in cached_files
-    raise OSError(
-OSError: nomic-embed-text is not a local folder and is not a valid model identifier listed on 'https://huggingface.co/models'
-If this is a private repository, make sure to pass a token having permission to this repo either by logging in with `hf auth login` or by passing `token=<your_token>`
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
-WARNING:transformers_modules.jinaai.xlm_hyphen_roberta_hyphen_flash_hyphen_implementation.2b6bc3f30750b3a9648fe9b63448c09920efe9be.modeling_xlm_roberta:flash_attn is not installed. Using PyTorch native attention implementation.
+  File "/root/gpu-scripts/torch_fastapi.py", line 292, in generate_endpoint
+    outputs = llm_model.generate(
+              ^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/transformers/generation/utils.py", line 2543, in generate
+    prepared_logits_processor = self._get_logits_processor(
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/transformers/generation/utils.py", line 1267, in _get_logits_processor
+    processors.append(TemperatureLogitsWarper(generation_config.temperature))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/transformers/generation/logits_process.py", line 287, in __init__
+    raise ValueError(except_msg)
+ValueError: `temperature` (=0.0) has to be a strictly positive float, otherwise your next token scores will be invalid. If you're looking for greedy decoding strategies, set `do_sample=False`.
+INFO:     127.0.0.1:57230 - "POST /api/generate HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 416, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/fastapi/applications.py", line 1135, in __call__
+    await super().__call__(scope, receive, send)
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/starlette/applications.py", line 107, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/fastapi/routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/fastapi/routing.py", line 101, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/fastapi/routing.py", line 355, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/fastapi/routing.py", line 243, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/gpu-scripts/torch_fastapi.py", line 292, in generate_endpoint
+    outputs = llm_model.generate(
+              ^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/transformers/generation/utils.py", line 2543, in generate
+    prepared_logits_processor = self._get_logits_processor(
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/transformers/generation/utils.py", line 1267, in _get_logits_processor
+    processors.append(TemperatureLogitsWarper(generation_config.temperature))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/gpu-scripts-0KjOeIt0-py3.11/lib/python3.11/site-packages/transformers/generation/logits_process.py", line 287, in __init__
+    raise ValueError(except_msg)
+ValueError: `temperature` (=0.0) has to be a strictly positive float, otherwise your next token scores will be invalid. If you're looking for greedy decoding strategies, set `do_sample=False`.
+INFO:     127.0.0.1:60972 - "POST /api/generate HTTP/1.1" 200 OK
+Fetching 5 files:   0%|          | 0/5 [00:00<?, ?it/s]Fetching 5 files:  20%|██        | 1/5 [02:20<09:22, 140.59s/it]Fetching 5 files: 100%|██████████| 5/5 [02:20<00:00, 28.12s/it] 
 INFO:accelerate.utils.modeling:We will use 90% of the memory on device 0 for storing the model, and 10% for the buffer to avoid OOM. You can set `max_memory` in to a higher value to use more memory (at your own risk).
-Encoding:   0%|          | 0/1 [00:00<?, ?it/s]Encoding: 100%|██████████| 1/1 [00:00<00:00, 15.59it/s]
-INFO:     127.0.0.1:52468 - "POST /api/embeddings HTTP/1.1" 200 OK
-Encoding:   0%|          | 0/1 [00:00<?, ?it/s]Encoding: 100%|██████████| 1/1 [00:00<00:00, 11.72it/s]
-INFO:     127.0.0.1:53846 - "POST /api/embeddings HTTP/1.1" 200 OK
-INFO:accelerate.utils.modeling:We will use 90% of the memory on device 0 for storing the model, and 10% for the buffer to avoid OOM. You can set `max_memory` in to a higher value to use more memory (at your own risk).
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:05<00:17,  5.67s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:12<00:12,  6.33s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:18<00:06,  6.34s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:20<00:00,  4.49s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:20<00:00,  5.12s/it]
-Setting `pad_token_id` to `eos_token_id`:151643 for open-end generation.
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:01<00:06,  1.59s/it]Loading checkpoint shards:  40%|████      | 2/5 [00:04<00:06,  2.19s/it]Loading checkpoint shards:  60%|██████    | 3/5 [00:06<00:04,  2.38s/it]Loading checkpoint shards:  80%|████████  | 4/5 [00:08<00:02,  2.27s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:09<00:00,  1.51s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:09<00:00,  1.82s/it]
+INFO:     127.0.0.1:52718 - "POST /api/generate HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [84876]

@@ -46,11 +46,14 @@ MODE_CONFIG = {
     "daily_8b": "Qwen/Qwen3-8B",
     "daily_14b": "Qwen/Qwen3-14B",
     "reasoning": "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
+    "mistral_7b": "mistralai/Mistral-7B-Instruct-v0.3",
+    "llama_31_8b": "meta-llama/Llama-3.1-8B-Instruct",
     "heavy_dense": "mistralai/Mistral-Small-3.2-24B-Instruct-2506",
     "heavy_moe_general": "Qwen/Qwen3-30B-A3B-Instruct-2507",
     "heavy_moe_coder": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
     "moe_20b": "openai/gpt-oss-20b",
 }
+
 
 
 DEFAULT_MODE = os.getenv("DEFAULT_MODE", "smart")

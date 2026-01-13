@@ -37,6 +37,41 @@ fi
 
 poetry env use "$PYTHON_BIN"
 
+ENV_FILE="$PROJECT_DIR/.env"
+
+if [[ -f "$ENV_FILE" ]]; then
+  sed -i 's/\r$//' "$ENV_FILE"
+  set -a
+  source "$ENV_FILE"
+  set +a
+  echo "Loaded env from $ENV_FILE"
+else
+  echo "No .env found at $ENV_FILE"
+fi
+
+# Git identity (from .env)
+GIT_NAME_RESOLVED="${GITHUB_NAME:-${GIT_NAME:-}}"
+GIT_EMAIL_RESOLVED="${GITHUB_EMAIL:-${GIT_EMAIL:-}}"
+
+if [[ -n "$GIT_NAME_RESOLVED" && -n "$GIT_EMAIL_RESOLVED" ]]; then
+  git config --global user.name "$GIT_NAME_RESOLVED"
+  git config --global user.email "$GIT_EMAIL_RESOLVED"
+  echo "Configured git identity: $GIT_NAME_RESOLVED <$GIT_EMAIL_RESOLVED>"
+else
+  echo "GITHUB_NAME/GITHUB_EMAIL not set in .env"
+fi
+
+# GitHub HTTPS credentials (disable VSCode helper)
+if [[ -n "${GITHUB_USERNAME:-}" && -n "${GITHUB_TOKEN:-}" ]]; then
+  git remote set-url origin https://github.com/tgrytnes/gpu-scripts.git
+  git config --global --unset credential.helper || true
+  git config --global credential.helper store
+  printf "https://%s:%s@github.com\n" "$GITHUB_USERNAME" "$GITHUB_TOKEN" > ~/.git-credentials
+  echo "Stored GitHub HTTPS credentials for $GITHUB_USERNAME"
+else
+  echo "GITHUB_USERNAME/GITHUB_TOKEN not set in .env"
+fi
+
 poetry source add --priority=explicit pytorch https://download.pytorch.org/whl/cu121
 poetry add torch torchvision torchaudio --source pytorch
 poetry add "uvicorn[standard]" fastapi transformers accelerate bitsandbytes \
@@ -92,11 +127,14 @@ MODE_CONFIG = {
     "daily_8b": "Qwen/Qwen3-8B",
     "daily_14b": "Qwen/Qwen3-14B",
     "reasoning": "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
+    "mistral_7b": "mistralai/Mistral-7B-Instruct-v0.3",
+    "llama_31_8b": "meta-llama/Llama-3.1-8B-Instruct",
     "heavy_dense": "mistralai/Mistral-Small-3.2-24B-Instruct-2506",
     "heavy_moe_general": "Qwen/Qwen3-30B-A3B-Instruct-2507",
     "heavy_moe_coder": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
     "moe_20b": "openai/gpt-oss-20b",
 }
+
 
 
 DEFAULT_MODE = os.getenv("DEFAULT_MODE", "smart")
@@ -368,6 +406,7 @@ async def embeddings_endpoint(req: EmbeddingRequest):
 def health():
     return {"status": "ok", "device": DEVICE, "current_llm": current_llm_mode}
 EOF
+
 
 poetry install --no-root
 
